@@ -388,4 +388,3 @@ function showToast(msg) {
 }
 
 // Starta app
-window.onload = () => showPage("plan");
