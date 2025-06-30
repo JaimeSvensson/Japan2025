@@ -98,17 +98,29 @@ onAuthStateChanged(auth, user => {
 
 // Page navigation
 function showPage(page) {
+  if (!currentUser) {
+    console.warn("Användare ej inloggad, kan inte visa sida:", page);
+    return;
+  }
+
   document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   document.getElementById(page).classList.remove("hidden");
-  if (page === "plan"  && lastActivitySnap) renderActivities(lastActivitySnap);
+
+  if (page === "plan" && lastActivitySnap) {
+    renderActivities(lastActivitySnap);
+  }
+
   if (page === "costs" && lastCostData) {
     renderCostHistory(lastCostData);
     renderBalanceOverview(lastCostData);
+
+    // Se till att inloggad användare alltid är förvald i checkboxarna
+    const userId = currentUser.email.split("@")[0];
+    document.querySelectorAll("#participant-checkboxes input").forEach(cb => {
+      if (cb.value === userId) cb.checked = true;
+    });
   }
 }
-document.querySelectorAll("nav button").forEach(btn =>
-  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")))
-);
 
 // ------------------ Reseplan ------------------
 const activitiesRef   = collection(db, "activities");
