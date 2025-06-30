@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Japan2025</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Japan2025</h1>
+  <nav>
+    <button onclick="showPage('plan')">Reseplan</button>
+    <button onclick="showPage('costs')">Kostnader</button>
+    <button onclick="showPage('packing')">Packlista</button>
+    <button onclick="showPage('notes')">Viktig Info</button>
+  </nav>
+
+  <section id="plan" class="page"></section>
+  <section id="costs" class="page" style="display:none;"></section>
+  <section id="packing" class="page" style="display:none;"></section>
+  <section id="notes" class="page" style="display:none;"></section>
+
+  <script src="app.js"></script>
+</body>
+</html>
