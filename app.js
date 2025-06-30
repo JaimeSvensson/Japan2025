@@ -59,7 +59,7 @@ const nav           = document.querySelector("nav");
 loginForm.addEventListener("submit", async e => {
   e.preventDefault();
   try {
-    const email    = `${usernameInput.value}@japan2025.com`;
+    const email    = ${usernameInput.value}@japan2025.com;
     const password = passwordInput.value;
     const cred     = await signInWithEmailAndPassword(auth, email, password);
     currentUser    = cred.user;
@@ -67,7 +67,7 @@ loginForm.addEventListener("submit", async e => {
     userInfo.style.display  = "block";
     nav.style.display       = "flex";
     const prefix = usernameInput.value;
-    welcomeMsg.textContent = `Inloggad som ${participants.find(p => p.id === prefix).name}`;
+    welcomeMsg.textContent = Inloggad som ${participants.find(p => p.id === prefix).name};
     showPage("plan");
   } catch (err) {
     alert("Fel inloggning: " + err.message);
@@ -86,7 +86,7 @@ onAuthStateChanged(auth, user => {
     userInfo.style.display  = "block";
     nav.style.display       = "flex";
     const prefix = user.email.split("@")[0];
-    welcomeMsg.textContent = `Inloggad som ${participants.find(p => p.id === prefix).name}`;
+    welcomeMsg.textContent = Inloggad som ${participants.find(p => p.id === prefix).name};
     showPage("plan");
   } else {
     currentUser = null;
@@ -98,29 +98,17 @@ onAuthStateChanged(auth, user => {
 
 // Page navigation
 function showPage(page) {
-  if (!currentUser) {
-    console.warn("Användare ej inloggad, kan inte visa sida:", page);
-    return;
-  }
-
   document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   document.getElementById(page).classList.remove("hidden");
-
-  if (page === "plan" && lastActivitySnap) {
-    renderActivities(lastActivitySnap);
-  }
-
+  if (page === "plan"  && lastActivitySnap) renderActivities(lastActivitySnap);
   if (page === "costs" && lastCostData) {
     renderCostHistory(lastCostData);
     renderBalanceOverview(lastCostData);
-
-    // Se till att inloggad användare alltid är förvald i checkboxarna
-    const userId = currentUser.email.split("@")[0];
-    document.querySelectorAll("#participant-checkboxes input").forEach(cb => {
-      if (cb.value === userId) cb.checked = true;
-    });
   }
 }
+document.querySelectorAll("nav button").forEach(btn =>
+  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")))
+);
 
 // ------------------ Reseplan ------------------
 const activitiesRef   = collection(db, "activities");
@@ -177,22 +165,22 @@ function renderActivities(snap) {
   Object.keys(grouped).sort().forEach(date => {
     const dayBox = document.createElement("div");
     dayBox.className = "day-box";
-    dayBox.innerHTML = `<h3>${new Date(date).toLocaleDateString("sv-SE",{
+    dayBox.innerHTML = <h3>${new Date(date).toLocaleDateString("sv-SE",{
       weekday:"long",day:"numeric",month:"long",year:"numeric"
-    })}</h3><ul></ul>`;
+    })}</h3><ul></ul>;
     const ul = dayBox.querySelector("ul");
     grouped[date]
       .sort((x, y) => x.time.localeCompare(y.time))
       .forEach(a => {
         const li = document.createElement("li");
-        li.innerHTML = `
+        li.innerHTML = 
           <div class="activity-row">
             <span><strong>${a.time}</strong> – ${a.place} (${a.note||""})</span>
             <span>
-              <span class="icon-btn" onclick="confirmEdit('${a.id}','${a.date}','${a.time}',\`${a.place}\`,\`${a.note}\`)">📝</span>
+              <span class="icon-btn" onclick="confirmEdit('${a.id}','${a.date}','${a.time}',\${a.place}\,\${a.note}\)">📝</span>
               <span class="icon-btn" onclick="confirmDelete('${a.id}')">🗑️</span>
             </span>
-          </div>`;
+          </div>;
         ul.appendChild(li);
       });
     container.appendChild(dayBox);
@@ -227,7 +215,7 @@ onSnapshot(costsRef, snap => {
 const pc = document.getElementById("participant-checkboxes");
 participants.forEach(p => {
   const lbl = document.createElement("label");
-  lbl.innerHTML = `<input type="checkbox" value="${p.id}" checked> ${p.name}`;
+  lbl.innerHTML = <input type="checkbox" value="${p.id}" checked> ${p.name};
   pc.appendChild(lbl);
 });
 
@@ -263,17 +251,17 @@ function renderCostHistory(costs) {
     const payerName    = (participants.find(p=>p.id===payer)||{name:payer}).name;
     const div = document.createElement("div");
     div.className = "day-box cost-entry";
-    div.innerHTML = `
+    div.innerHTML = 
       <strong>${date}</strong>: ${title} – ${amount.toFixed(2)} kr<br>
       Betalat av: ${payerName}<br>
       Deltagare: ${displayNames.join(", ")}
       <span class="cost-controls">
         ${payer === currentUser.email.split("@")[0]
-          ? `<span class="icon-btn" onclick="confirmEditCost('${id}','${date}','${title}',${amount},${JSON.stringify(ids)})">📝</span>
-             <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>`
-          : ``}
+          ? <span class="icon-btn" onclick="confirmEditCost('${id}','${date}','${title}',${amount},${JSON.stringify(ids)})">📝</span>
+             <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>
+          : `}
       </span>
-    `;
+    ;
     list.appendChild(div);
   });
 }
@@ -364,12 +352,12 @@ function renderBalanceOverview(costs) {
 
     if (owesThem.length) {
       const sub1 = document.createElement("h4");
-      sub1.textContent = `Personer som ska betala ${person.name}:`;
+      sub1.textContent = Personer som ska betala ${person.name}:;
       ov.appendChild(sub1);
       const ul1 = document.createElement("ul");
       owesThem.forEach(e => {
         const li = document.createElement("li");
-        li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
+        li.textContent = ${e.name} – ${e.amount.toFixed(2)} kr;
         li.style.color = "green";
         ul1.appendChild(li);
       });
@@ -378,12 +366,12 @@ function renderBalanceOverview(costs) {
 
     if (theyOwe.length) {
       const sub2 = document.createElement("h4");
-      sub2.textContent = `Personer ${person.name} ska betala:`;
+      sub2.textContent = Personer ${person.name} ska betala:;
       ov.appendChild(sub2);
       const ul2 = document.createElement("ul");
       theyOwe.forEach(e => {
         const li = document.createElement("li");
-        li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
+        li.textContent = ${e.name} – ${e.amount.toFixed(2)} kr;
         li.style.color = "red";
         ul2.appendChild(li);
       });
