@@ -154,12 +154,18 @@ window.confirmDelete = async (id) => {
 };
 
 function showPage(page) {
-  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-  const activePage = document.getElementById(page);
-  activePage.classList.remove("hidden");
+  document.querySelectorAll(".page").forEach(p => {
+    p.classList.add("hidden");
+  });
 
+  const current = document.getElementById(page);
+  current.classList.remove("hidden");
+
+  // Vänta lite tills DOM uppdaterats innan rendering
   if (page === "plan" && lastSnapshot) {
-    renderActivities(lastSnapshot);
+    setTimeout(() => {
+      renderActivities(lastSnapshot);
+    }, 50);
   }
 }
 
