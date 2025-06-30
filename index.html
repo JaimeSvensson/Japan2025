@@ -9,27 +9,41 @@
 </head>
 <body>
   <h1>Japan2025</h1>
-  <nav>
+
+  <div id="auth-section">
+    <form id="login-form">
+      <input type="text" id="username" placeholder="Användarnamn" required />
+      <input type="password" id="password" placeholder="Lösenord" required />
+      <button type="submit">Logga in</button>
+    </form>
+    <div id="user-info" style="display:none;">
+      <span id="welcome-msg"></span>
+      <button id="logout-btn">Logga ut</button>
+    </div>
+  </div>
+
+  <nav style="display:none;">
     <button data-page="plan">Reseplan</button>
     <button data-page="costs">Kostnader</button>
     <button data-page="packing">Packlista</button>
     <button data-page="notes">Viktig Info</button>
   </nav>
 
-  <section id="plan" class="page">
-  <h2>Reseplan</h2>
-  <form id="activity-form">
-    <input type="date" id="date" required />
-    <input type="time" id="time" required />
-    <input type="text" id="place" placeholder="Plats" required />
-    <input type="text" id="note" placeholder="Anteckning" />
-    <button type="submit">Lägg till aktivitet</button>
-  </form>
-  <div id="activity-list"></div>
-</section>
-<section id="costs" class="page hidden"></section>
-<section id="packing" class="page hidden"></section>
-<section id="notes" class="page hidden"></section>
+  <section id="plan" class="page hidden">
+    <h2>Reseplan</h2>
+    <form id="activity-form">
+      <input type="date" id="date" required />
+      <input type="time" id="time" required />
+      <input type="text" id="place" placeholder="Plats" required />
+      <input type="text" id="note" placeholder="Anteckning" />
+      <button type="submit">Lägg till aktivitet</button>
+    </form>
+    <div id="activity-list"></div>
+  </section>
+
+  <section id="costs" class="page hidden"></section>
+  <section id="packing" class="page hidden"></section>
+  <section id="notes" class="page hidden"></section>
 
   <script type="module" src="app.js"></script>
 </body>
