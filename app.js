@@ -259,33 +259,42 @@ function renderCostHistory(costs) {
 // Calculate net balances
 function calculateNetBalances(costs) {
   const bal = {};
-  // init
-  participants.forEach(a => {
-    bal[a.id] = {};
-    participants.forEach(b => {
-      if (a.id !== b.id) bal[a.id][b.id] = 0;
+  
+  // Initiera bal för varje deltagarpar
+  participants.forEach(p => {
+    bal[p.id] = {};
+    participants.forEach(q => {
+      if (p.id !== q.id) bal[p.id][q.id] = 0;
     });
   });
-  // accumulate
+
+  // Ackumulera skulder, men skippa vid felaktiga poster
   costs.forEach(c => {
-    const share = c.amount / (c.participants || []).length;
-    (c.participants || []).forEach(pid => {
-      if (pid !== c.payer) {
-        bal[pid][c.payer] += share;
-        bal[c.payer][pid] -= share;
-      }
+    const payer = c.payer;
+    const ids   = Array.isArray(c.participants) ? c.participants : [];
+
+    // Skippa om ingen giltig payer eller för få deltagare
+    if (!payer || !bal[payer] || ids.length < 2) return;
+
+    const share = c.amount / ids.length;
+    ids.forEach(pid => {
+      if (pid === payer) return;            // inte deltaga i egen skuld
+      if (!bal[pid] || !bal[payer]) return; // undvik undefined
+      bal[pid][payer] += share;
+      bal[payer][pid] -= share;
     });
   });
-  // net out mutual debts
+
+  // Netta ut motstridiga skulder
   participants.forEach(a => {
     participants.forEach(b => {
-      if (a.id !== b.id) {
-        const net = bal[a.id][b.id] - bal[b.id][a.id];
-        bal[a.id][b.id] = net > 0 ? net : 0;
-        bal[b.id][a.id] = net > 0 ? 0 : -net;
-      }
+      if (a.id === b.id) return;
+      const net = bal[a.id][b.id] - bal[b.id][a.id];
+      bal[a.id][b.id] = net > 0 ? net : 0;
+      bal[b.id][a.id] = net > 0 ? 0 : -net;
     });
   });
+
   return bal;
 }
 
