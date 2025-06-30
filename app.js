@@ -291,21 +291,65 @@ function calculateNetBalances(costs) {
 
 // Render balance overview
 function renderBalanceOverview(costs) {
-  console.log("renderBalanceOverview körs med costs:", costs);
-  const bal = calculateNetBalances(costs);
-  console.log("beräknade netton:", bal);
-
+  // Hämta container
   const ov = document.getElementById("balance-overview");
-  ov.innerHTML = "<h3>Saldo mellan deltagare</h3>";
+  ov.innerHTML = ""; 
 
-  participants.forEach(a => {
-    participants.forEach(b => {
-      if (a.id !== b.id && bal[a.id][b.id] > 0.01) {
-        const p = document.createElement("p");
-        p.textContent = `${a.name} är skyldig ${b.name}: ${bal[a.id][b.id].toFixed(2)} kr`;
-        ov.appendChild(p);
-      }
-    });
+  // Räkna fram nettosaldon
+  const bal = calculateNetBalances(costs);
+  const threshold = 0.01;
+
+  // Gå igenom varje person
+  participants.forEach(person => {
+    const pid = person.id;
+
+    // De som är skyldiga den här personen
+    const owesThem = participants
+      .filter(p => p.id !== pid && bal[p.id][pid] > threshold)
+      .map(p => ({ name: p.name, amount: bal[p.id][pid] }));
+
+    // De som personen är skyldig
+    const theyOwe = participants
+      .filter(p => p.id !== pid && bal[pid][p.id] > threshold)
+      .map(p => ({ name: p.name, amount: bal[pid][p.id] }));
+
+    // Hoppa över om inga skulder alls
+    if (owesThem.length === 0 && theyOwe.length === 0) return;
+
+    // Rubrik för personen
+    const heading = document.createElement("h3");
+    heading.textContent = person.name;
+    ov.appendChild(heading);
+
+    // Lista: de som ska betala personen
+    if (owesThem.length > 0) {
+      const subH1 = document.createElement("h4");
+      subH1.textContent = `Personer som ska betala ${person.name}:`;
+      ov.appendChild(subH1);
+
+      const ul1 = document.createElement("ul");
+      owesThem.forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.name} – ${entry.amount.toFixed(2)} kr`;
+        ul1.appendChild(li);
+      });
+      ov.appendChild(ul1);
+    }
+
+    // Lista: personer personen ska betala
+    if (theyOwe.length > 0) {
+      const subH2 = document.createElement("h4");
+      subH2.textContent = `Personer ${person.name} ska betala:`;
+      ov.appendChild(subH2);
+
+      const ul2 = document.createElement("ul");
+      theyOwe.forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.name} – ${entry.amount.toFixed(2)} kr`;
+        ul2.appendChild(li);
+      });
+      ov.appendChild(ul2);
+    }
   });
 }
 
