@@ -1,4 +1,3 @@
-// Import Firebase SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getFirestore,
@@ -7,7 +6,9 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot
+  onSnapshot,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import {
   getAuth,
@@ -16,7 +17,6 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD4ifyIMcPdPfxfji5qkttFtMNafeHyn_I",
   authDomain: "japan2025-pwa.firebaseapp.com",
@@ -29,9 +29,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
 let currentUser = null;
 
-// UI-element
 const loginForm = document.getElementById("login-form");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
@@ -40,7 +40,6 @@ const welcomeMsg = document.getElementById("welcome-msg");
 const logoutBtn = document.getElementById("logout-btn");
 const nav = document.querySelector("nav");
 
-// Inloggning
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const email = usernameInput.value;
@@ -79,8 +78,8 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Här börjar aktiviteterna
 const activitiesRef = collection(db, "activities");
+const costsRef = collection(db, "costs");
 let editingId = null;
 let lastSnapshot = null;
 
@@ -115,64 +114,51 @@ function renderActivities(snapshot) {
   if (!container) return;
   container.innerHTML = "";
   const grouped = {};
-
   snapshot.forEach(doc => {
     const act = doc.data();
     act.id = doc.id;
     if (!grouped[act.date]) grouped[act.date] = [];
     grouped[act.date].push(act);
   });
-
   Object.keys(grouped).sort().forEach(date => {
     const dayBox = document.createElement("div");
     dayBox.className = "day-box";
     const formattedDate = formatDate(date);
     dayBox.innerHTML = `<h3>${formattedDate}</h3><ul></ul>`;
     const ul = dayBox.querySelector("ul");
-
-    grouped[date]
-      .sort((a, b) => a.time.localeCompare(b.time))
-      .forEach(act => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <div class="activity-row">
-            <span><strong>${act.time}</strong> – ${act.place} (${act.note})</span>
-            <span>
-              <span class="icon-btn" onclick="confirmEdit('${act.id}', '${act.date}', '${act.time}', \`${act.place}\`, \`${act.note}\`)">📝</span>
-              <span class="icon-btn" onclick="confirmDelete('${act.id}')">🗑️</span>
-            </span>
-          </div>
-        `;
-        ul.appendChild(li);
-      });
-
+    grouped[date].sort((a, b) => a.time.localeCompare(b.time)).forEach(act => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="activity-row">
+          <span><strong>${act.time}</strong> – ${act.place} (${act.note})</span>
+          <span>
+            <span class="icon-btn" onclick="confirmEdit('${act.id}', '${act.date}', '${act.time}', \`${act.place}\`, \`${act.note}\`)">📝</span>
+            <span class="icon-btn" onclick="confirmDelete('${act.id}')">🗑️</span>
+          </span>
+        </div>`;
+      ul.appendChild(li);
+    });
     container.appendChild(dayBox);
   });
 }
 
 onSnapshot(activitiesRef, snapshot => {
   lastSnapshot = snapshot;
-  if (document.getElementById("plan").classList.contains("hidden") === false) {
+  if (!document.getElementById("plan").classList.contains("hidden")) {
     renderActivities(snapshot);
   }
 });
 
-document.getElementById("activity-form").addEventListener("submit", async e => {
+document.getElementById("activity-form")?.addEventListener("submit", async e => {
   e.preventDefault();
   const date = document.getElementById("date").value;
   const time = document.getElementById("time").value;
   const place = document.getElementById("place").value;
   const note = document.getElementById("note").value;
-
-  if (!date || !time || !place) {
-    alert("Fyll i datum, tid och plats.");
-    return;
-  }
-
+  if (!date || !time || !place) return alert("Fyll i datum, tid och plats.");
   try {
     if (editingId) {
-      const activityRef = doc(db, "activities", editingId);
-      await updateDoc(activityRef, { date, time, place, note });
+      await updateDoc(doc(db, "activities", editingId), { date, time, place, note });
       showToast("Aktiviteten har uppdaterats");
       editingId = null;
       document.querySelector("#activity-form button").innerText = "Lägg till aktivitet";
@@ -180,11 +166,10 @@ document.getElementById("activity-form").addEventListener("submit", async e => {
       await addDoc(activitiesRef, { date, time, place, note });
       showToast("Aktivitet tillagd");
     }
-
     document.getElementById("activity-form").reset();
   } catch (err) {
-    console.error("Fel vid sparande:", err);
     alert("Kunde inte spara aktiviteten.");
+    console.error(err);
   }
 });
 
@@ -204,15 +189,13 @@ window.confirmDelete = async (id) => {
     await deleteDoc(doc(db, "activities", id));
     showToast("Aktiviteten har raderats");
   } catch (err) {
-    console.error("Fel vid radering:", err);
     alert("Kunde inte radera aktiviteten.");
+    console.error(err);
   }
 };
 
 function showPage(page) {
-  document.querySelectorAll(".page").forEach(p => {
-    p.classList.add("hidden");
-  });
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   const current = document.getElementById(page);
   current.classList.remove("hidden");
   if (page === "plan" && lastSnapshot) {
@@ -221,7 +204,5 @@ function showPage(page) {
 }
 
 document.querySelectorAll("nav button").forEach(btn => {
-  btn.addEventListener("click", () => {
-    showPage(btn.getAttribute("data-page"));
-  });
+  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
 });
