@@ -21,7 +21,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyD4ifyIMcPdPfxfji5qkttFtMNafeHyn_I",
   authDomain: "japan2025-pwa.firebaseapp.com",
   projectId: "japan2025-pwa",
-  storageBucket: "japan2025-pwa.firebasestorage.app",
+  storageBucket: "japan2025-pwa.appspot.com",
   messagingSenderId: "1086888213462",
   appId: "1:1086888213462:web:7085048c154f6cea258277"
 };
@@ -31,43 +31,43 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Participants definition: id matches login prefix, name is display
+// Participants definition
 const participants = [
-  { id: "jaime",    name: "Jaime"    },
-  { id: "jake",     name: "Jake"     },
-  { id: "filip",    name: "Filip"    },
-  { id: "lukas",    name: "Lukas"    },
-  { id: "lucas",    name: "Lucas"    },
+  { id: "jaime", name: "Jaime" },
+  { id: "jake", name: "Jake" },
+  { id: "filip", name: "Filip" },
+  { id: "lukas", name: "Lukas" },
+  { id: "lucas", name: "Lucas" },
   { id: "johannes", name: "Johannes" },
-  { id: "eek",      name: "Eek"      },
-  { id: "simon",    name: "Simon"    }
+  { id: "eek", name: "Eek" },
+  { id: "simon", name: "Simon" }
 ];
 
 let currentUser = null;
 let editingCostId = null;
 
 // UI Elements
-const loginForm     = document.getElementById("login-form");
+const loginForm = document.getElementById("login-form");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
-const userInfo      = document.getElementById("user-info");
-const welcomeMsg    = document.getElementById("welcome-msg");
-const logoutBtn     = document.getElementById("logout-btn");
-const nav           = document.querySelector("nav");
+const userInfo = document.getElementById("user-info");
+const welcomeMsg = document.getElementById("welcome-msg");
+const logoutBtn = document.getElementById("logout-btn");
+const nav = document.querySelector("nav");
 
 // Authentication
 loginForm.addEventListener("submit", async e => {
   e.preventDefault();
   try {
-    const email    = ${usernameInput.value}@japan2025.com;
+    const email = `${usernameInput.value}@japan2025.com`;
     const password = passwordInput.value;
-    const cred     = await signInWithEmailAndPassword(auth, email, password);
-    currentUser    = cred.user;
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    currentUser = cred.user;
     loginForm.style.display = "none";
-    userInfo.style.display  = "block";
-    nav.style.display       = "flex";
+    userInfo.style.display = "block";
+    nav.style.display = "flex";
     const prefix = usernameInput.value;
-    welcomeMsg.textContent = Inloggad som ${participants.find(p => p.id === prefix).name};
+    welcomeMsg.textContent = `Inloggad som ${participants.find(p => p.id === prefix)?.name || prefix}`;
     showPage("plan");
   } catch (err) {
     alert("Fel inloggning: " + err.message);
@@ -83,37 +83,37 @@ onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
     loginForm.style.display = "none";
-    userInfo.style.display  = "block";
-    nav.style.display       = "flex";
+    userInfo.style.display = "block";
+    nav.style.display = "flex";
     const prefix = user.email.split("@")[0];
-    welcomeMsg.textContent = Inloggad som ${participants.find(p => p.id === prefix).name};
+    welcomeMsg.textContent = `Inloggad som ${participants.find(p => p.id === prefix)?.name || prefix}`;
     showPage("plan");
   } else {
     currentUser = null;
     loginForm.style.display = "block";
-    userInfo.style.display  = "none";
-    nav.style.display       = "none";
+    userInfo.style.display = "none";
+    nav.style.display = "none";
   }
 });
 
-// Page navigation
+// Navigation
 function showPage(page) {
   document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   document.getElementById(page).classList.remove("hidden");
-  if (page === "plan"  && lastActivitySnap) renderActivities(lastActivitySnap);
+  if (page === "plan" && lastActivitySnap) renderActivities(lastActivitySnap);
   if (page === "costs" && lastCostData) {
     renderCostHistory(lastCostData);
     renderBalanceOverview(lastCostData);
   }
 }
 document.querySelectorAll("nav button").forEach(btn =>
-  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")))
+  btn.addEventListener("click", () => showPage(btn.dataset.page))
 );
 
 // ------------------ Reseplan ------------------
-const activitiesRef   = collection(db, "activities");
-let lastActivitySnap  = null,
-    editingActId      = null;
+const activitiesRef = collection(db, "activities");
+let lastActivitySnap = null;
+let editingActId = null;
 
 onSnapshot(activitiesRef, snap => {
   lastActivitySnap = snap;
@@ -124,10 +124,10 @@ onSnapshot(activitiesRef, snap => {
 
 document.getElementById("activity-form").addEventListener("submit", async e => {
   e.preventDefault();
-  const date  = document.getElementById("date").value;
-  const time  = document.getElementById("time").value;
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
   const place = document.getElementById("place").value;
-  const note  = document.getElementById("note").value;
+  const note = document.getElementById("note").value;
   if (!date || !time || !place) return alert("Fyll i datum, tid och plats.");
   if (editingActId) {
     await updateDoc(doc(db, "activities", editingActId), { date, time, place, note });
@@ -142,10 +142,10 @@ document.getElementById("activity-form").addEventListener("submit", async e => {
 window.confirmEdit = (id, date, time, place, note) => {
   if (!confirm("Vill du redigera denna aktivitet?")) return;
   editingActId = id;
-  document.getElementById("date").value  = date;
-  document.getElementById("time").value  = time;
+  document.getElementById("date").value = date;
+  document.getElementById("time").value = time;
   document.getElementById("place").value = place;
-  document.getElementById("note").value  = note;
+  document.getElementById("note").value = note;
   document.querySelector("#activity-form button").innerText = "Spara ändring";
 };
 
@@ -165,33 +165,29 @@ function renderActivities(snap) {
   Object.keys(grouped).sort().forEach(date => {
     const dayBox = document.createElement("div");
     dayBox.className = "day-box";
-    dayBox.innerHTML = <h3>${new Date(date).toLocaleDateString("sv-SE",{
-      weekday:"long",day:"numeric",month:"long",year:"numeric"
-    })}</h3><ul></ul>;
+    dayBox.innerHTML = `<h3>${new Date(date).toLocaleDateString("sv-SE", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
+    })}</h3><ul></ul>`;
     const ul = dayBox.querySelector("ul");
-    grouped[date]
-      .sort((x, y) => x.time.localeCompare(y.time))
-      .forEach(a => {
-        const li = document.createElement("li");
-        li.innerHTML = 
-          <div class="activity-row">
-            <span><strong>${a.time}</strong> – ${a.place} (${a.note||""})</span>
-            <span>
-              <span class="icon-btn" onclick="confirmEdit('${a.id}','${a.date}','${a.time}',\${a.place}\,\${a.note}\)">📝</span>
-              <span class="icon-btn" onclick="confirmDelete('${a.id}')">🗑️</span>
-            </span>
-          </div>;
-        ul.appendChild(li);
-      });
+    grouped[date].sort((x, y) => x.time.localeCompare(y.time)).forEach(a => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="activity-row">
+          <span><strong>${a.time}</strong> – ${a.place} (${a.note || ""})</span>
+          <span>
+            <span class="icon-btn" onclick="confirmEdit('${a.id}','${a.date}','${a.time}', \`${a.place}\`, \`${a.note}\`)">📝</span>
+            <span class="icon-btn" onclick="confirmDelete('${a.id}')">🗑️</span>
+          </span>
+        </div>`;
+      ul.appendChild(li);
+    });
     container.appendChild(dayBox);
   });
 }
-
 // ------------------ Kostnader ------------------
 const costsRef   = collection(db, "costs");
 let lastCostData = null;
 
-// Real-time listener, map snapshot to clean objects
 onSnapshot(costsRef, snap => {
   lastCostData = snap.docs.map(ds => {
     const d = ds.data();
@@ -211,15 +207,15 @@ onSnapshot(costsRef, snap => {
   }
 });
 
-// Build cost checkboxes
+// Bygg checkboxar för deltagare
 const pc = document.getElementById("participant-checkboxes");
 participants.forEach(p => {
   const lbl = document.createElement("label");
-  lbl.innerHTML = <input type="checkbox" value="${p.id}" checked> ${p.name};
+  lbl.innerHTML = `<input type="checkbox" value="${p.id}" checked> ${p.name}`;
   pc.appendChild(lbl);
 });
 
-// Submit or update cost
+// Submit eller uppdatera kostnad
 document.getElementById("cost-form").addEventListener("submit", async e => {
   e.preventDefault();
   const date   = document.getElementById("cost-date").value;
@@ -241,62 +237,61 @@ document.getElementById("cost-form").addEventListener("submit", async e => {
   e.target.reset();
 });
 
-// Render cost history with edit/delete controls
+// Rendera historik
 function renderCostHistory(costs) {
   const list = document.getElementById("cost-list");
   list.innerHTML = "<h3>Historik</h3>";
   costs.forEach(c => {
     const { id, date, title, amount, payer, participants: ids = [] } = c;
-    const displayNames = ids.map(pid => (participants.find(p=>p.id===pid)||{name:pid}).name);
-    const payerName    = (participants.find(p=>p.id===payer)||{name:payer}).name;
+    const displayNames = ids.map(pid => (participants.find(p => p.id === pid) || { name: pid }).name);
+    const payerName    = (participants.find(p => p.id === payer) || { name: payer }).name;
     const div = document.createElement("div");
     div.className = "day-box cost-entry";
-    div.innerHTML = 
+    div.innerHTML = `
       <strong>${date}</strong>: ${title} – ${amount.toFixed(2)} kr<br>
       Betalat av: ${payerName}<br>
       Deltagare: ${displayNames.join(", ")}
       <span class="cost-controls">
         ${payer === currentUser.email.split("@")[0]
-          ? <span class="icon-btn" onclick="confirmEditCost('${id}','${date}','${title}',${amount},${JSON.stringify(ids)})">📝</span>
-             <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>
-          : `}
+          ? `<span class="icon-btn" onclick="confirmEditCost('${id}','${date}','${title}',${amount},${JSON.stringify(ids)}')">📝</span>
+             <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>`
+          : ``}
       </span>
-    ;
+    `;
     list.appendChild(div);
   });
 }
 
-// Confirm edit/delete for costs
+// Editera kostnad
 window.confirmEditCost = (id, date, title, amount, participants) => {
   if (!confirm("Vill du redigera denna kostnad?")) return;
   document.getElementById("cost-date").value   = date;
   document.getElementById("cost-title").value  = title;
   document.getElementById("cost-amount").value = amount;
-  // Set checkboxes
   document.querySelectorAll("#participant-checkboxes input").forEach(cb => {
     cb.checked = participants.includes(cb.value);
   });
-  editingCostId = id;  
+  editingCostId = id;
   document.querySelector("#cost-form button").innerText = "Spara ändring";
 };
 
+// Ta bort kostnad
 window.confirmDeleteCost = async id => {
   if (!confirm("Är du säker på att du vill ta bort denna kostnad?")) return;
   await deleteDoc(doc(db, "costs", id));
   showToast("Kostnaden har raderats");
 };
 
-// Calculate net balances
+// Beräkna saldon
 function calculateNetBalances(costs) {
   const bal = {};
-  // init
   participants.forEach(a => {
     bal[a.id] = {};
     participants.forEach(b => {
       if (a.id !== b.id) bal[a.id][b.id] = 0;
     });
   });
-  // accumulate only positive owes
+
   costs.forEach(c => {
     const payer = c.payer;
     const ids   = Array.isArray(c.participants) ? c.participants : [];
@@ -308,7 +303,7 @@ function calculateNetBalances(costs) {
       }
     });
   });
-  // net out mutual debts correctly
+
   participants.forEach(a => {
     participants.forEach(b => {
       if (a.id === b.id) return;
@@ -323,10 +318,11 @@ function calculateNetBalances(costs) {
       }
     });
   });
+
   return bal;
 }
 
-// Render balance overview with grouping and color
+// Rendera saldo
 function renderBalanceOverview(costs) {
   const ov = document.getElementById("balance-overview");
   ov.innerHTML = "";
@@ -335,13 +331,11 @@ function renderBalanceOverview(costs) {
 
   participants.forEach(person => {
     const pid = person.id;
-    // Who owes them
     const owesThem = participants
-      .filter(p => p.id!==pid && bal[p.id][pid]>threshold)
+      .filter(p => p.id !== pid && bal[p.id][pid] > threshold)
       .map(p => ({ name: p.name, amount: bal[p.id][pid] }));
-    // Who they owe
     const theyOwe = participants
-      .filter(p => p.id!==pid && bal[pid][p.id]>threshold)
+      .filter(p => p.id !== pid && bal[pid][p.id] > threshold)
       .map(p => ({ name: p.name, amount: bal[pid][p.id] }));
 
     if (!owesThem.length && !theyOwe.length) return;
@@ -352,12 +346,12 @@ function renderBalanceOverview(costs) {
 
     if (owesThem.length) {
       const sub1 = document.createElement("h4");
-      sub1.textContent = Personer som ska betala ${person.name}:;
+      sub1.textContent = `Personer som ska betala ${person.name}:`;
       ov.appendChild(sub1);
       const ul1 = document.createElement("ul");
       owesThem.forEach(e => {
         const li = document.createElement("li");
-        li.textContent = ${e.name} – ${e.amount.toFixed(2)} kr;
+        li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
         li.style.color = "green";
         ul1.appendChild(li);
       });
@@ -366,12 +360,12 @@ function renderBalanceOverview(costs) {
 
     if (theyOwe.length) {
       const sub2 = document.createElement("h4");
-      sub2.textContent = Personer ${person.name} ska betala:;
+      sub2.textContent = `Personer ${person.name} ska betala:`;
       ov.appendChild(sub2);
       const ul2 = document.createElement("ul");
       theyOwe.forEach(e => {
         const li = document.createElement("li");
-        li.textContent = ${e.name} – ${e.amount.toFixed(2)} kr;
+        li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
         li.style.color = "red";
         ul2.appendChild(li);
       });
@@ -380,7 +374,7 @@ function renderBalanceOverview(costs) {
   });
 }
 
-// Toast helper
+// Toast
 function showToast(msg) {
   const t = document.createElement("div");
   t.innerText = msg;
@@ -393,5 +387,5 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 2500);
 }
 
-// On load
+// Starta app
 window.onload = () => showPage("plan");
