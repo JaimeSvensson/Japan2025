@@ -16,13 +16,13 @@
       <input type="password" id="password" placeholder="Lösenord" required />
       <button type="submit">Logga in</button>
     </form>
-    <div id="user-info" class="hidden">
+    <div id="user-info" style="display:none;">
       <span id="welcome-msg"></span>
       <button id="logout-btn">Logga ut</button>
     </div>
   </div>
 
-  <nav class="hidden">
+  <nav style="display:none;">
     <button data-page="plan">Reseplan</button>
     <button data-page="costs">Kostnader</button>
     <button data-page="packing">Packlista</button>
@@ -41,7 +41,40 @@
     <div id="activity-list"></div>
   </section>
 
-  <section id="costs" class="page hidden"></section>
+  <section id="costs" class="page hidden">
+    <h2>Kostnader</h2>
+    <form id="cost-form">
+      <input type="date" id="cost-date" required />
+      <input type="text" id="cost-title" placeholder="Rubrik" required />
+      <input type="number" id="cost-amount" placeholder="Summa (kr)" required />
+      <select id="cost-paidby" required>
+        <option value="">Betalat av...</option>
+        <option value="Jaime">Jaime</option>
+        <option value="Jake">Jake</option>
+        <option value="Filip">Filip</option>
+        <option value="Lukas">Lukas</option>
+        <option value="Lucas">Lucas</option>
+        <option value="Johannes">Johannes</option>
+        <option value="Eek">Eek</option>
+        <option value="Simon">Simon</option>
+      </select>
+      <fieldset id="cost-split">
+        <legend>Gäller för</legend>
+        <label><input type="checkbox" value="Jaime" checked /> Jaime</label>
+        <label><input type="checkbox" value="Jake" checked /> Jake</label>
+        <label><input type="checkbox" value="Filip" checked /> Filip</label>
+        <label><input type="checkbox" value="Lukas" checked /> Lukas</label>
+        <label><input type="checkbox" value="Lucas" checked /> Lucas</label>
+        <label><input type="checkbox" value="Johannes" checked /> Johannes</label>
+        <label><input type="checkbox" value="Eek" checked /> Eek</label>
+        <label><input type="checkbox" value="Simon" checked /> Simon</label>
+      </fieldset>
+      <button type="submit">Lägg till utgift</button>
+    </form>
+    <div id="cost-list"></div>
+    <div id="cost-summary"></div>
+  </section>
+
   <section id="packing" class="page hidden"></section>
   <section id="notes" class="page hidden"></section>
 
