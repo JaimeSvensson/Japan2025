@@ -1,22 +1,45 @@
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
   document.getElementById(page).style.display = 'block';
-  renderPage(page);
+  if (page === 'plan') renderActivities();
 }
 
-function renderPage(page) {
-  const el = document.getElementById(page);
-  el.innerHTML = '';
+function renderActivities() {
+  const container = document.getElementById('activity-list');
+  container.innerHTML = '';
 
-  if (page === 'plan') {
-    el.innerHTML = '<h2>Reseplan</h2><ul><li>Dag 1 – Ankomst till Tokyo</li><li>Dag 2 – Sightseeing i Shibuya</li></ul>';
-  } else if (page === 'costs') {
-    el.innerHTML = '<h2>Kostnader</h2><p>Ej implementerat ännu</p>';
-  } else if (page === 'packing') {
-    el.innerHTML = '<h2>Packlista</h2><ul><li>Pass ✅</li><li>Kamera</li></ul>';
-  } else if (page === 'notes') {
-    el.innerHTML = '<h2>Viktig Information</h2><p>Boendeadress: Tokyo Inn, XYZ Street</p>';
-  }
+  const activities = JSON.parse(localStorage.getItem('activities') || '[]');
+  const grouped = {};
+
+  activities.forEach(act => {
+    if (!grouped[act.date]) grouped[act.date] = [];
+    grouped[act.date].push(act);
+  });
+
+  Object.keys(grouped).sort().forEach(date => {
+    const dayDiv = document.createElement('div');
+    dayDiv.innerHTML = `<h3>${date}</h3><ul>` + grouped[date].map(act =>
+      `<li><strong>${act.time}</strong> – ${act.place} (${act.note})</li>`
+    ).join('') + '</ul>';
+    container.appendChild(dayDiv);
+  });
 }
+
+document.getElementById('activity-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const activity = {
+    date: document.getElementById('date').value,
+    time: document.getElementById('time').value,
+    place: document.getElementById('place').value,
+    note: document.getElementById('note').value
+  };
+
+  const activities = JSON.parse(localStorage.getItem('activities') || '[]');
+  activities.push(activity);
+  localStorage.setItem('activities', JSON.stringify(activities));
+
+  document.getElementById('activity-form').reset();
+  renderActivities();
+});
 
 window.onload = () => showPage('plan');
