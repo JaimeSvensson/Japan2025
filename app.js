@@ -7,8 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot,
-  getDocs
+  onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import {
   getAuth,
@@ -32,9 +31,7 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 let currentUser = null;
 
-const participants = ["Jaime", "Jake", "Filip", "Lukas", "Lucas", "Johannes", "Eek", "Simon"];
-
-// UI Elements
+// Inloggningselement
 const loginForm = document.getElementById("login-form");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
@@ -49,10 +46,10 @@ loginForm.addEventListener("submit", async (e) => {
   const password = passwordInput.value;
   try {
     const userCred = await signInWithEmailAndPassword(auth, email, password);
+    currentUser = userCred.user;
     loginForm.style.display = "none";
     userInfo.style.display = "block";
     nav.style.display = "flex";
-    currentUser = userCred.user;
     welcomeMsg.textContent = `Inloggad som ${email}`;
     showPage("plan");
   } catch (err) {
@@ -81,80 +78,33 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// ---------------- AKTIVITETER ----------------
+// Visa sidor
+function showPage(page) {
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+  const current = document.getElementById(page);
+  current.classList.remove("hidden");
+  if (page === "plan" && lastActivitySnapshot) {
+    setTimeout(() => renderActivities(lastActivitySnapshot), 50);
+  }
+  if (page === "costs" && lastCostSnapshot) {
+    setTimeout(() => renderCosts(lastCostSnapshot), 50);
+  }
+}
+
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    showPage(btn.getAttribute("data-page"));
+  });
+});
+
+// Aktiviteter
 const activitiesRef = collection(db, "activities");
 let editingId = null;
-let lastSnapshot = null;
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("sv-SE", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
-}
-
-function showToast(msg) {
-  const toast = document.createElement("div");
-  toast.innerText = msg;
-  toast.style.position = "fixed";
-  toast.style.bottom = "20px";
-  toast.style.left = "50%";
-  toast.style.transform = "translateX(-50%)";
-  toast.style.background = "#333";
-  toast.style.color = "#fff";
-  toast.style.padding = "10px 20px";
-  toast.style.borderRadius = "8px";
-  toast.style.zIndex = 9999;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2500);
-}
-
-function renderActivities(snapshot) {
-  const container = document.getElementById("activity-list");
-  if (!container) return;
-  container.innerHTML = "";
-  const grouped = {};
-
-  snapshot.forEach(doc => {
-    const act = doc.data();
-    act.id = doc.id;
-    if (!grouped[act.date]) grouped[act.date] = [];
-    grouped[act.date].push(act);
-  });
-
-  Object.keys(grouped).sort().forEach(date => {
-    const dayBox = document.createElement("div");
-    dayBox.className = "day-box";
-    const formattedDate = formatDate(date);
-    dayBox.innerHTML = `<h3>${formattedDate}</h3><ul></ul>`;
-    const ul = dayBox.querySelector("ul");
-
-    grouped[date]
-      .sort((a, b) => a.time.localeCompare(b.time))
-      .forEach(act => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <div class="activity-row">
-            <span><strong>${act.time}</strong> – ${act.place} (${act.note})</span>
-            <span>
-              <span class="icon-btn" onclick="confirmEdit('${act.id}', '${act.date}', '${act.time}', \`${act.place}\`, \`${act.note}\`)">📝</span>
-              <span class="icon-btn" onclick="confirmDelete('${act.id}')">🗑️</span>
-            </span>
-          </div>
-        `;
-        ul.appendChild(li);
-      });
-
-    container.appendChild(dayBox);
-  });
-}
+let lastActivitySnapshot = null;
 
 onSnapshot(activitiesRef, snapshot => {
-  lastSnapshot = snapshot;
-  if (document.getElementById("plan").classList.contains("hidden") === false) {
+  lastActivitySnapshot = snapshot;
+  if (!document.getElementById("plan").classList.contains("hidden")) {
     renderActivities(snapshot);
   }
 });
@@ -166,26 +116,19 @@ document.getElementById("activity-form").addEventListener("submit", async e => {
   const place = document.getElementById("place").value;
   const note = document.getElementById("note").value;
 
-  if (!date || !time || !place) {
-    alert("Fyll i datum, tid och plats.");
-    return;
-  }
+  if (!date || !time || !place) return alert("Fyll i datum, tid och plats.");
 
   try {
     if (editingId) {
-      const activityRef = doc(db, "activities", editingId);
-      await updateDoc(activityRef, { date, time, place, note });
-      showToast("Aktiviteten har uppdaterats");
+      await updateDoc(doc(db, "activities", editingId), { date, time, place, note });
       editingId = null;
       document.querySelector("#activity-form button").innerText = "Lägg till aktivitet";
     } else {
       await addDoc(activitiesRef, { date, time, place, note });
-      showToast("Aktivitet tillagd");
     }
     document.getElementById("activity-form").reset();
   } catch (err) {
-    console.error("Fel vid sparande:", err);
-    alert("Kunde inte spara aktiviteten.");
+    alert("Fel vid sparande: " + err.message);
   }
 });
 
@@ -203,115 +146,120 @@ window.confirmDelete = async (id) => {
   if (!confirm("Är du säker på att du vill ta bort aktiviteten?")) return;
   try {
     await deleteDoc(doc(db, "activities", id));
-    showToast("Aktiviteten har raderats");
   } catch (err) {
-    console.error("Fel vid radering:", err);
-    alert("Kunde inte radera aktiviteten.");
+    alert("Fel vid radering: " + err.message);
   }
 };
 
-function showPage(page) {
-  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-  const current = document.getElementById(page);
-  current.classList.remove("hidden");
-  if (page === "plan" && lastSnapshot) {
-    setTimeout(() => renderActivities(lastSnapshot), 50);
-  } else if (page === "costs") {
-    renderCostBalances();
-  }
-}
+function renderActivities(snapshot) {
+  const container = document.getElementById("activity-list");
+  if (!container) return;
+  container.innerHTML = "";
+  const grouped = {};
+  snapshot.forEach(doc => {
+    const act = doc.data();
+    act.id = doc.id;
+    if (!grouped[act.date]) grouped[act.date] = [];
+    grouped[act.date].push(act);
+  });
 
-document.querySelectorAll("nav button").forEach(btn => {
-  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
-});
-
-// ---------------- KOSTNADER ----------------
-const costsRef = collection(db, "costs");
-
-const costForm = document.getElementById("cost-form");
-const costList = document.getElementById("cost-list");
-const participantContainer = document.getElementById("participant-checkboxes");
-
-function createCheckboxes() {
-  participantContainer.innerHTML = "";
-  participants.forEach(name => {
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = name;
-    checkbox.checked = true;
-    label.appendChild(checkbox);
-    label.append(" ", name);
-    participantContainer.appendChild(label);
+  Object.keys(grouped).sort().forEach(date => {
+    const dayBox = document.createElement("div");
+    dayBox.className = "day-box";
+    const formattedDate = new Date(date).toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    dayBox.innerHTML = `<h3>${formattedDate}</h3><ul></ul>`;
+    const ul = dayBox.querySelector("ul");
+    grouped[date].sort((a, b) => a.time.localeCompare(b.time)).forEach(act => {
+      const li = document.createElement("li");
+      li.innerHTML = `<div class="activity-row">
+        <span><strong>${act.time}</strong> – ${act.place} (${act.note})</span>
+        <span>
+          <span class="icon-btn" onclick="confirmEdit('${act.id}', '${act.date}', '${act.time}', \`${act.place}\`, \`${act.note}\`)">📝</span>
+          <span class="icon-btn" onclick="confirmDelete('${act.id}')">🗑️</span>
+        </span>
+      </div>`;
+      ul.appendChild(li);
+    });
+    container.appendChild(dayBox);
   });
 }
 
-createCheckboxes();
+// Kostnader
+const participants = ["Jaime", "Jake", "Filip", "Lukas", "Lucas", "Johannes", "Eek", "Simon"];
+const costsRef = collection(db, "costs");
+let lastCostSnapshot = null;
+
+onSnapshot(costsRef, snapshot => {
+  lastCostSnapshot = snapshot;
+  if (!document.getElementById("costs").classList.contains("hidden")) {
+    renderCosts(snapshot);
+  }
+});
+
+const costForm = document.getElementById("cost-form");
+const checkboxesContainer = document.getElementById("participant-checkboxes");
+const costList = document.getElementById("cost-list");
+const balanceOverview = document.getElementById("balance-overview");
+
+participants.forEach(name => {
+  const label = document.createElement("label");
+  label.innerHTML = `<input type="checkbox" value="${name}" checked> ${name}`;
+  checkboxesContainer.appendChild(label);
+});
 
 costForm.addEventListener("submit", async e => {
   e.preventDefault();
   const date = document.getElementById("cost-date").value;
   const title = document.getElementById("cost-title").value;
   const amount = parseFloat(document.getElementById("cost-amount").value);
-  const payer = currentUser.email.split("@")[0];
-  const selected = [...participantContainer.querySelectorAll("input:checked")].map(cb => cb.value);
+  const sharedWith = [...checkboxesContainer.querySelectorAll("input:checked")].map(c => c.value);
+  const paidBy = currentUser?.email || "Okänd";
 
-  if (!date || !title || isNaN(amount) || selected.length === 0) {
-    alert("Fyll i alla fält.");
-    return;
-  }
-
-  try {
-    await addDoc(costsRef, {
-      date,
-      title,
-      amount,
-      payer,
-      participants: selected,
-      editedBy: payer,
-      createdAt: Date.now()
-    });
-    showToast("Kostnad tillagd");
-    costForm.reset();
-    createCheckboxes();
-  } catch (err) {
-    console.error("Fel vid sparande av kostnad:", err);
-    alert("Kunde inte spara kostnaden.");
-  }
+  if (!date || !title || !amount || sharedWith.length === 0) return alert("Fyll i alla fält");
+  await addDoc(costsRef, { date, title, amount, sharedWith, paidBy });
+  costForm.reset();
 });
 
-function renderCostBalances() {
+function renderCosts(snapshot) {
   costList.innerHTML = "";
-  getDocs(costsRef).then(snapshot => {
-    const balances = {};
-    participants.forEach(a => {
-      balances[a] = {};
-      participants.forEach(b => {
-        if (a !== b) balances[a][b] = 0;
-      });
+  const balances = {};
+  participants.forEach(p1 => {
+    balances[p1] = {};
+    participants.forEach(p2 => {
+      if (p1 !== p2) balances[p1][p2] = 0;
     });
-
-    snapshot.forEach(doc => {
-      const cost = doc.data();
-      const share = cost.amount / cost.participants.length;
-      cost.participants.forEach(p => {
-        if (p !== cost.payer) {
-          balances[p][cost.payer] += share;
-          balances[cost.payer][p] -= share;
-        }
-      });
-    });
-
-    for (const [from, owes] of Object.entries(balances)) {
-      for (const [to, amount] of Object.entries(owes)) {
-        if (amount > 0.01) {
-          const div = document.createElement("div");
-          div.textContent = `${from} är skyldig ${to}: ${amount.toFixed(2)} kr`;
-          costList.appendChild(div);
-        }
-      }
-    }
   });
+
+  snapshot.forEach(doc => {
+    const cost = doc.data();
+    const { date, title, amount, sharedWith, paidBy } = cost;
+    const perPerson = amount / sharedWith.length;
+
+    sharedWith.forEach(p => {
+      if (p !== paidBy) {
+        balances[p][paidBy] += perPerson;
+        balances[paidBy][p] -= perPerson;
+      }
+    });
+
+    const div = document.createElement("div");
+    div.innerHTML = `<strong>${date}</strong>: ${title} – ${amount.toFixed(2)} kr <br> Betalat av: ${paidBy}, delat på: ${sharedWith.join(", ")}`;
+    costList.appendChild(div);
+  });
+
+  renderBalance(balances);
 }
 
-window.onload = () => showPage("plan");
+function renderBalance(balances) {
+  balanceOverview.innerHTML = "";
+  for (const person in balances) {
+    for (const other in balances[person]) {
+      const net = balances[person][other] - balances[other][person];
+      if (net > 0.01) {
+        const p = document.createElement("p");
+        p.textContent = `${person} är skyldig ${other} ${net.toFixed(2)} kr`;
+        balanceOverview.appendChild(p);
+      }
+    }
+  }
+}
