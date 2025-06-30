@@ -44,37 +44,21 @@
 
   <!-- Kostnader -->
   <section id="costs" class="page hidden">
-    <h2>Kostnader</h2>
-    <form id="cost-form">
-      <input type="date" id="cost-date" required />
-      <input type="text" id="cost-title" placeholder="Rubrik" required />
-      <input type="number" id="cost-amount" placeholder="Belopp (kr)" required />
-      <select id="cost-paid-by" required>
-        <option value="">Vem betalade?</option>
-        <option>Jaime</option>
-        <option>Jake</option>
-        <option>Filip</option>
-        <option>Lukas</option>
-        <option>Lucas</option>
-        <option>Johannes</option>
-        <option>Eek</option>
-        <option>Simon</option>
-      </select>
-      <label>Gäller för:</label>
-      <div class="person-checkboxes">
-        <label><input type="checkbox" value="Jaime" /> Jaime</label>
-        <label><input type="checkbox" value="Jake" /> Jake</label>
-        <label><input type="checkbox" value="Filip" /> Filip</label>
-        <label><input type="checkbox" value="Lukas" /> Lukas</label>
-        <label><input type="checkbox" value="Lucas" /> Lucas</label>
-        <label><input type="checkbox" value="Johannes" /> Johannes</label>
-        <label><input type="checkbox" value="Eek" /> Eek</label>
-        <label><input type="checkbox" value="Simon" /> Simon</label>
-      </div>
-      <button type="submit">Lägg till kostnad</button>
-    </form>
-    <div id="cost-list"></div>
-  </section>
+  <h2>Kostnader</h2>
+  <form id="cost-form">
+    <input type="date" id="cost-date" required />
+    <input type="text" id="cost-title" placeholder="Titel" required />
+    <input type="number" id="cost-amount" placeholder="Belopp (kr)" step="0.01" required />
+    
+    <div id="participant-checkboxes" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+      <!-- Checkboxar för deltagare läggs till automatiskt -->
+    </div>
+
+    <button type="submit">Lägg till kostnad</button>
+  </form>
+
+  <div id="cost-list"></div>
+</section>
 
   <!-- Packlista -->
   <section id="packing" class="page hidden"></section>
