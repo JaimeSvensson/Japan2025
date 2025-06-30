@@ -1,3 +1,4 @@
+// Import Firebase SDKs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getFirestore,
@@ -8,6 +9,12 @@ import {
   doc,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -21,8 +28,59 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const activitiesRef = collection(db, "activities");
+const auth = getAuth(app);
+let currentUser = null;
 
+// UI-element
+const loginForm = document.getElementById("login-form");
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const userInfo = document.getElementById("user-info");
+const welcomeMsg = document.getElementById("welcome-msg");
+const logoutBtn = document.getElementById("logout-btn");
+const nav = document.querySelector("nav");
+
+// Inloggning
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = usernameInput.value;
+  const password = passwordInput.value;
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, password);
+    loginForm.style.display = "none";
+    userInfo.style.display = "block";
+    nav.style.display = "flex";
+    currentUser = userCred.user;
+    welcomeMsg.textContent = `Inloggad som ${email}`;
+    showPage("plan");
+  } catch (err) {
+    alert("Fel inloggning: " + err.message);
+  }
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await signOut(auth);
+  location.reload();
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    loginForm.style.display = "none";
+    userInfo.style.display = "block";
+    nav.style.display = "flex";
+    welcomeMsg.textContent = `Inloggad som ${user.email}`;
+    showPage("plan");
+  } else {
+    loginForm.style.display = "block";
+    userInfo.style.display = "none";
+    nav.style.display = "none";
+    currentUser = null;
+  }
+});
+
+// Här börjar aktiviteterna
+const activitiesRef = collection(db, "activities");
 let editingId = null;
 let lastSnapshot = null;
 
@@ -92,15 +150,13 @@ function renderActivities(snapshot) {
   });
 }
 
-// Realtidsuppdatering
 onSnapshot(activitiesRef, snapshot => {
   lastSnapshot = snapshot;
-  if (document.getElementById("plan").style.display !== "none") {
+  if (document.getElementById("plan").classList.contains("hidden") === false) {
     renderActivities(snapshot);
   }
 });
 
-// Formulärhantering
 document.getElementById("activity-form").addEventListener("submit", async e => {
   e.preventDefault();
   const date = document.getElementById("date").value;
@@ -157,24 +213,15 @@ function showPage(page) {
   document.querySelectorAll(".page").forEach(p => {
     p.classList.add("hidden");
   });
-
   const current = document.getElementById(page);
   current.classList.remove("hidden");
-
-  // Vänta lite tills DOM uppdaterats innan rendering
   if (page === "plan" && lastSnapshot) {
-    setTimeout(() => {
-      renderActivities(lastSnapshot);
-    }, 50);
+    setTimeout(() => renderActivities(lastSnapshot), 50);
   }
 }
 
-// Aktivera menyknappar
 document.querySelectorAll("nav button").forEach(btn => {
   btn.addEventListener("click", () => {
     showPage(btn.getAttribute("data-page"));
   });
 });
-
-// Startvy
-window.onload = () => showPage("plan");
