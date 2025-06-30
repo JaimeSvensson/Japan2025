@@ -4,11 +4,11 @@ import {
   getFirestore,
   collection,
   addDoc,
-  getDocs,
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot
+  onSnapshot,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import {
   getAuth,
@@ -34,7 +34,7 @@ let currentUser = null;
 
 const participants = ["Jaime", "Jake", "Filip", "Lukas", "Lucas", "Johannes", "Eek", "Simon"];
 
-// Inloggning
+// UI Elements
 const loginForm = document.getElementById("login-form");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
@@ -49,10 +49,10 @@ loginForm.addEventListener("submit", async (e) => {
   const password = passwordInput.value;
   try {
     const userCred = await signInWithEmailAndPassword(auth, email, password);
-    currentUser = userCred.user;
     loginForm.style.display = "none";
     userInfo.style.display = "block";
     nav.style.display = "flex";
+    currentUser = userCred.user;
     welcomeMsg.textContent = `Inloggad som ${email}`;
     showPage("plan");
   } catch (err) {
@@ -74,35 +74,17 @@ onAuthStateChanged(auth, (user) => {
     welcomeMsg.textContent = `Inloggad som ${user.email}`;
     showPage("plan");
   } else {
-    currentUser = null;
     loginForm.style.display = "block";
     userInfo.style.display = "none";
     nav.style.display = "none";
+    currentUser = null;
   }
 });
 
-// SIDBYTE
-function showPage(page) {
-  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-  const current = document.getElementById(page);
-  current.classList.remove("hidden");
-  if (page === "plan" && lastActivitySnapshot) {
-    setTimeout(() => renderActivities(lastActivitySnapshot), 50);
-  } else if (page === "costs" && lastCostSnapshot) {
-    setTimeout(() => renderCosts(lastCostSnapshot), 50);
-  }
-}
-
-document.querySelectorAll("nav button").forEach(btn => {
-  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
-});
-
-// ----------------------
-// Aktiviteter (reseplan)
-// ----------------------
+// ---------------- AKTIVITETER ----------------
 const activitiesRef = collection(db, "activities");
 let editingId = null;
-let lastActivitySnapshot = null;
+let lastSnapshot = null;
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -171,7 +153,7 @@ function renderActivities(snapshot) {
 }
 
 onSnapshot(activitiesRef, snapshot => {
-  lastActivitySnapshot = snapshot;
+  lastSnapshot = snapshot;
   if (document.getElementById("plan").classList.contains("hidden") === false) {
     renderActivities(snapshot);
   }
@@ -228,4 +210,108 @@ window.confirmDelete = async (id) => {
   }
 };
 
-// Kostnader kommer härnäst... (full implementation följer i nästa steg)
+function showPage(page) {
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+  const current = document.getElementById(page);
+  current.classList.remove("hidden");
+  if (page === "plan" && lastSnapshot) {
+    setTimeout(() => renderActivities(lastSnapshot), 50);
+  } else if (page === "costs") {
+    renderCostBalances();
+  }
+}
+
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.addEventListener("click", () => showPage(btn.getAttribute("data-page")));
+});
+
+// ---------------- KOSTNADER ----------------
+const costsRef = collection(db, "costs");
+
+const costForm = document.getElementById("cost-form");
+const costList = document.getElementById("cost-list");
+const participantContainer = document.getElementById("participant-checkboxes");
+
+function createCheckboxes() {
+  participantContainer.innerHTML = "";
+  participants.forEach(name => {
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = name;
+    checkbox.checked = true;
+    label.appendChild(checkbox);
+    label.append(" ", name);
+    participantContainer.appendChild(label);
+  });
+}
+
+createCheckboxes();
+
+costForm.addEventListener("submit", async e => {
+  e.preventDefault();
+  const date = document.getElementById("cost-date").value;
+  const title = document.getElementById("cost-title").value;
+  const amount = parseFloat(document.getElementById("cost-amount").value);
+  const payer = currentUser.email.split("@")[0];
+  const selected = [...participantContainer.querySelectorAll("input:checked")].map(cb => cb.value);
+
+  if (!date || !title || isNaN(amount) || selected.length === 0) {
+    alert("Fyll i alla fält.");
+    return;
+  }
+
+  try {
+    await addDoc(costsRef, {
+      date,
+      title,
+      amount,
+      payer,
+      participants: selected,
+      editedBy: payer,
+      createdAt: Date.now()
+    });
+    showToast("Kostnad tillagd");
+    costForm.reset();
+    createCheckboxes();
+  } catch (err) {
+    console.error("Fel vid sparande av kostnad:", err);
+    alert("Kunde inte spara kostnaden.");
+  }
+});
+
+function renderCostBalances() {
+  costList.innerHTML = "";
+  getDocs(costsRef).then(snapshot => {
+    const balances = {};
+    participants.forEach(a => {
+      balances[a] = {};
+      participants.forEach(b => {
+        if (a !== b) balances[a][b] = 0;
+      });
+    });
+
+    snapshot.forEach(doc => {
+      const cost = doc.data();
+      const share = cost.amount / cost.participants.length;
+      cost.participants.forEach(p => {
+        if (p !== cost.payer) {
+          balances[p][cost.payer] += share;
+          balances[cost.payer][p] -= share;
+        }
+      });
+    });
+
+    for (const [from, owes] of Object.entries(balances)) {
+      for (const [to, amount] of Object.entries(owes)) {
+        if (amount > 0.01) {
+          const div = document.createElement("div");
+          div.textContent = `${from} är skyldig ${to}: ${amount.toFixed(2)} kr`;
+          costList.appendChild(div);
+        }
+      }
+    }
+  });
+}
+
+window.onload = () => showPage("plan");
