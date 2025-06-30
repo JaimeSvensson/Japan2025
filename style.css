@@ -113,3 +113,7 @@ form button:hover {
   margin-left: 0.5rem;
   user-select: none;
 }
+
+.page.hidden {
+  display: none;
+}
