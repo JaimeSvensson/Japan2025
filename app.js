@@ -155,10 +155,14 @@ window.confirmDelete = async (id) => {
 
 function showPage(page) {
   document.querySelectorAll(".page").forEach(p => p.style.display = "none");
-  document.getElementById(page).style.display = "block";
+  const activePage = document.getElementById(page);
+  activePage.style.display = "block";
 
   if (page === "plan" && lastSnapshot) {
-    renderActivities(lastSnapshot);
+    // Vänta lite tills DOM hunnit uppdatera
+    setTimeout(() => {
+      renderActivities(lastSnapshot);
+    }, 100);
   }
 }
 
