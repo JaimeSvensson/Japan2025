@@ -358,7 +358,7 @@ function renderBalanceOverview(costs) {
       owesThem.forEach(e => {
         const li = document.createElement("li");
         li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
-        li.style.color = "red";
+        li.style.color = "green";
         ul1.appendChild(li);
       });
       ov.appendChild(ul1);
@@ -372,7 +372,7 @@ function renderBalanceOverview(costs) {
       theyOwe.forEach(e => {
         const li = document.createElement("li");
         li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
-        li.style.color = "green";
+        li.style.color = "red";
         ul2.appendChild(li);
       });
       ov.appendChild(ul2);
