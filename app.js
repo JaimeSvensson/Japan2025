@@ -289,46 +289,37 @@ window.confirmDeleteCost = async id => {
 // Calculate net balances
 function calculateNetBalances(costs) {
   const bal = {};
-  participants.forEach(p => {
-    bal[p.id] = {};
-    participants.forEach(q => {
-      if (p.id !== q.id) bal[p.id][q.id] = 0;
+  // init
+  participants.forEach(a => {
+    bal[a.id] = {};
+    participants.forEach(b => {
+      if (a.id !== b.id) bal[a.id][b.id] = 0;
     });
   });
+  // accumulate only positive owes
   costs.forEach(c => {
-  const payer = c.payer;
-  const ids   = Array.isArray(c.participants) ? c.participants : [];
-
-  // Debug-logg
-  console.log(">> Kostnad:", c.title,
-              "| payer:", payer,
-              "| deltagare:", ids,
-              "| belopp:", c.amount);
-
-  // Räkna ut share
-  const share = c.amount / ids.length;
-  console.log("   → share = amount / ids.length =", c.amount, "/", ids.length, "=", share);
-
-  // Skippa om felaktigt
-  if (!payer || !bal[payer] || ids.length < 2) {
-    console.log("   → Hoppar över (ogiltig payer eller för få deltagare)");
-    return;
-  }
-
-  ids.forEach(pid => {
-    if (pid === payer) return;
-    if (!bal[pid] || !bal[payer]) return;
-    bal[pid][payer] += share;
-    bal[payer][pid] -= share;
-    console.log(`   → ${pid} är skyldig ${payer} ${share}`);
+    const payer = c.payer;
+    const ids   = Array.isArray(c.participants) ? c.participants : [];
+    if (!payer || !bal[payer] || ids.length < 2) return;
+    const share = c.amount / ids.length;
+    ids.forEach(pid => {
+      if (pid !== payer && bal[pid]) {
+        bal[pid][payer] += share;
+      }
+    });
   });
-});
+  // net out mutual debts correctly
   participants.forEach(a => {
     participants.forEach(b => {
-      if (a.id !== b.id) {
-        const net = bal[a.id][b.id] - bal[b.id][a.id];
-        bal[a.id][b.id] = net > 0 ? net : 0;
-        bal[b.id][a.id] = net > 0 ? 0 : -net;
+      if (a.id === b.id) return;
+      const ab = bal[a.id][b.id];
+      const ba = bal[b.id][a.id];
+      if (ab >= ba) {
+        bal[a.id][b.id] = ab - ba;
+        bal[b.id][a.id] = 0;
+      } else {
+        bal[b.id][a.id] = ba - ab;
+        bal[a.id][b.id] = 0;
       }
     });
   });
