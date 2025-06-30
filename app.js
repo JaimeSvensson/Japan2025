@@ -27,9 +27,9 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-initializeApp(firebaseConfig);
-const db = getFirestore();
-const auth = getAuth();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 // Participants definition: id matches login prefix, name is display
 const participants = [
@@ -46,29 +46,27 @@ const participants = [
 let currentUser = null;
 
 // UI Elements
-const loginForm      = document.getElementById("login-form");
-const usernameInput  = document.getElementById("username");
-const passwordInput  = document.getElementById("password");
-const userInfo       = document.getElementById("user-info");
-const welcomeMsg     = document.getElementById("welcome-msg");
-const logoutBtn      = document.getElementById("logout-btn");
-const nav            = document.querySelector("nav");
+const loginForm     = document.getElementById("login-form");
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const userInfo      = document.getElementById("user-info");
+const welcomeMsg    = document.getElementById("welcome-msg");
+const logoutBtn     = document.getElementById("logout-btn");
+const nav           = document.querySelector("nav");
 
 // Authentication
 loginForm.addEventListener("submit", async e => {
   e.preventDefault();
   try {
-    const cred = await signInWithEmailAndPassword(
-      auth,
-      `${usernameInput.value}@japan2025.com`,
-      passwordInput.value
-    );
-    currentUser = cred.user;
+    const email    = `${usernameInput.value}@japan2025.com`;
+    const password = passwordInput.value;
+    const cred     = await signInWithEmailAndPassword(auth, email, password);
+    currentUser    = cred.user;
     loginForm.style.display = "none";
-    userInfo.style.display   = "block";
-    nav.style.display        = "flex";
+    userInfo.style.display  = "block";
+    nav.style.display       = "flex";
     const prefix = usernameInput.value;
-    welcomeMsg.textContent    = `Inloggad som ${participants.find(p => p.id === prefix).name}`;
+    welcomeMsg.textContent = `Inloggad som ${participants.find(p => p.id === prefix).name}`;
     showPage("plan");
   } catch (err) {
     alert("Fel inloggning: " + err.message);
@@ -84,16 +82,16 @@ onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
     loginForm.style.display = "none";
-    userInfo.style.display   = "block";
-    nav.style.display        = "flex";
+    userInfo.style.display  = "block";
+    nav.style.display       = "flex";
     const prefix = user.email.split("@")[0];
-    welcomeMsg.textContent    = `Inloggad som ${participants.find(p => p.id === prefix).name}`;
+    welcomeMsg.textContent = `Inloggad som ${participants.find(p => p.id === prefix).name}`;
     showPage("plan");
   } else {
     currentUser = null;
     loginForm.style.display = "block";
-    userInfo.style.display   = "none";
-    nav.style.display        = "none";
+    userInfo.style.display  = "none";
+    nav.style.display       = "none";
   }
 });
 
@@ -112,9 +110,9 @@ document.querySelectorAll("nav button").forEach(btn =>
 );
 
 // ------------------ Reseplan ------------------
-const activitiesRef    = collection(db, "activities");
-let lastActivitySnap   = null,
-    editingActId       = null;
+const activitiesRef   = collection(db, "activities");
+let lastActivitySnap  = null,
+    editingActId      = null;
 
 onSnapshot(activitiesRef, snap => {
   lastActivitySnap = snap;
@@ -164,23 +162,26 @@ function renderActivities(snap) {
     (grouped[a.date] = grouped[a.date] || []).push(a);
   });
   Object.keys(grouped).sort().forEach(date => {
-    const dayBox = document.createElement("div"); dayBox.className = "day-box";
+    const dayBox = document.createElement("div");
+    dayBox.className = "day-box";
     dayBox.innerHTML = `<h3>${new Date(date).toLocaleDateString("sv-SE",{
       weekday:"long",day:"numeric",month:"long",year:"numeric"
     })}</h3><ul></ul>`;
     const ul = dayBox.querySelector("ul");
-    grouped[date].sort((x,y)=>x.time.localeCompare(y.time)).forEach(a => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <div class="activity-row">
-          <span><strong>${a.time}</strong> – ${a.place} (${a.note||""})</span>
-          <span>
-            <span class="icon-btn" onclick="confirmEdit('${a.id}','${a.date}','${a.time}',\`${a.place}\`,\`${a.note}\`)">📝</span>
-            <span class="icon-btn" onclick="confirmDelete('${a.id}')">🗑️</span>
-          </span>
-        </div>`;
-      ul.appendChild(li);
-    });
+    grouped[date]
+      .sort((x, y) => x.time.localeCompare(y.time))
+      .forEach(a => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div class="activity-row">
+            <span><strong>${a.time}</strong> – ${a.place} (${a.note||""})</span>
+            <span>
+              <span class="icon-btn" onclick="confirmEdit('${a.id}','${a.date}','${a.time}',\`${a.place}\`,\`${a.note}\`)">📝</span>
+              <span class="icon-btn" onclick="confirmDelete('${a.id}')">🗑️</span>
+            </span>
+          </div>`;
+        ul.appendChild(li);
+      });
     container.appendChild(dayBox);
   });
 }
@@ -219,11 +220,11 @@ participants.forEach(p => {
 // Submit cost
 document.getElementById("cost-form").addEventListener("submit", async e => {
   e.preventDefault();
-  const date     = document.getElementById("cost-date").value;
-  const title    = document.getElementById("cost-title").value;
-  const amount   = parseFloat(document.getElementById("cost-amount").value);
-  const payer    = currentUser.email.split("@")[0];
-  const shared   = Array.from(pc.querySelectorAll("input:checked")).map(cb => cb.value);
+  const date   = document.getElementById("cost-date").value;
+  const title  = document.getElementById("cost-title").value;
+  const amount = parseFloat(document.getElementById("cost-amount").value);
+  const payer  = currentUser.email.split("@")[0];
+  const shared = Array.from(pc.querySelectorAll("input:checked")).map(cb => cb.value);
   if (!date || !title || isNaN(amount) || shared.length === 0) {
     return alert("Fyll i alla fält och välj deltagare.");
   }
@@ -255,7 +256,7 @@ function renderCostHistory(costs) {
   });
 }
 
-// Corrected function keyword here
+// Calculate net balances
 function calculateNetBalances(costs) {
   const bal = {};
   // init
@@ -290,9 +291,13 @@ function calculateNetBalances(costs) {
 
 // Render balance overview
 function renderBalanceOverview(costs) {
+  console.log("renderBalanceOverview körs med costs:", costs);
+  const bal = calculateNetBalances(costs);
+  console.log("beräknade netton:", bal);
+
   const ov = document.getElementById("balance-overview");
   ov.innerHTML = "<h3>Saldo mellan deltagare</h3>";
-  const bal = calculateNetBalances(costs);
+
   participants.forEach(a => {
     participants.forEach(b => {
       if (a.id !== b.id && bal[a.id][b.id] > 0.01) {
