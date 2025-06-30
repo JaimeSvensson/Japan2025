@@ -154,15 +154,12 @@ window.confirmDelete = async (id) => {
 };
 
 function showPage(page) {
-  document.querySelectorAll(".page").forEach(p => p.style.display = "none");
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   const activePage = document.getElementById(page);
-  activePage.style.display = "block";
+  activePage.classList.remove("hidden");
 
   if (page === "plan" && lastSnapshot) {
-    // Vänta lite tills DOM hunnit uppdatera
-    setTimeout(() => {
-      renderActivities(lastSnapshot);
-    }, 100);
+    renderActivities(lastSnapshot);
   }
 }
 
