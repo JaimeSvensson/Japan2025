@@ -1,9 +1,15 @@
-
-// Firebase-import via CDN (eftersom vi inte använder bundler)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-// Din firebaseConfig
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyD4ifyIMcPdPfxfji5qkttFtMNafeHyn_I",
   authDomain: "japan2025-pwa.firebaseapp.com",
@@ -13,14 +19,13 @@ const firebaseConfig = {
   appId: "1:1086888213462:web:7085048c154f6cea258277"
 };
 
-// Initiera Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const activitiesRef = collection(db, "activities");
 
 let editingId = null;
+let lastSnapshot = null;
 
-// 🧠 Konvertera datum till svensk datumtext
 function formatDate(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("sv-SE", {
@@ -31,7 +36,6 @@ function formatDate(dateStr) {
   });
 }
 
-// 🔔 Toast-funktion
 function showToast(msg) {
   const toast = document.createElement("div");
   toast.innerText = msg;
@@ -48,7 +52,6 @@ function showToast(msg) {
   setTimeout(() => toast.remove(), 2500);
 }
 
-// 🎨 Rendera reseplan
 function renderActivities(snapshot) {
   const container = document.getElementById("activity-list");
   if (!container) return;
@@ -89,8 +92,13 @@ function renderActivities(snapshot) {
   });
 }
 
-// 🔃 Realtidslyssnare
-onSnapshot(activitiesRef, renderActivities);
+// Realtidsuppdatering
+onSnapshot(activitiesRef, snapshot => {
+  lastSnapshot = snapshot;
+  if (document.getElementById("plan").style.display !== "none") {
+    renderActivities(snapshot);
+  }
+});
 
 // Formulärhantering
 document.getElementById("activity-form").addEventListener("submit", async e => {
@@ -148,14 +156,18 @@ window.confirmDelete = async (id) => {
 function showPage(page) {
   document.querySelectorAll(".page").forEach(p => p.style.display = "none");
   document.getElementById(page).style.display = "block";
+
+  if (page === "plan" && lastSnapshot) {
+    renderActivities(lastSnapshot);
+  }
 }
 
-// 🧭 Menyknappar: flikhantering
+// Aktivera menyknappar
 document.querySelectorAll("nav button").forEach(btn => {
   btn.addEventListener("click", () => {
     showPage(btn.getAttribute("data-page"));
   });
 });
 
-// Standardvy
+// Startvy
 window.onload = () => showPage("plan");
