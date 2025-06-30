@@ -296,17 +296,33 @@ function calculateNetBalances(costs) {
     });
   });
   costs.forEach(c => {
-    const payer = c.payer;
-    const ids   = Array.isArray(c.participants) ? c.participants : [];
-    if (!payer || !bal[payer] || ids.length < 2) return;
-    const share = c.amount / ids.length;
-    ids.forEach(pid => {
-      if (pid !== payer) {
-        bal[pid][payer] += share;
-        bal[payer][pid] -= share;
-      }
-    });
+  const payer = c.payer;
+  const ids   = Array.isArray(c.participants) ? c.participants : [];
+
+  // Debug-logg
+  console.log(">> Kostnad:", c.title,
+              "| payer:", payer,
+              "| deltagare:", ids,
+              "| belopp:", c.amount);
+
+  // Räkna ut share
+  const share = c.amount / ids.length;
+  console.log("   → share = amount / ids.length =", c.amount, "/", ids.length, "=", share);
+
+  // Skippa om felaktigt
+  if (!payer || !bal[payer] || ids.length < 2) {
+    console.log("   → Hoppar över (ogiltig payer eller för få deltagare)");
+    return;
+  }
+
+  ids.forEach(pid => {
+    if (pid === payer) return;
+    if (!bal[pid] || !bal[payer]) return;
+    bal[pid][payer] += share;
+    bal[payer][pid] -= share;
+    console.log(`   → ${pid} är skyldig ${payer} ${share}`);
   });
+});
   participants.forEach(a => {
     participants.forEach(b => {
       if (a.id !== b.id) {
