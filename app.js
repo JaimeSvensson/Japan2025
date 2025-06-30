@@ -44,6 +44,7 @@ const participants = [
 ];
 
 let currentUser = null;
+let editingCostId = null;
 
 // UI Elements
 const loginForm     = document.getElementById("login-form");
@@ -195,10 +196,11 @@ onSnapshot(costsRef, snap => {
   lastCostData = snap.docs.map(ds => {
     const d = ds.data();
     return {
-      date: d.date,
-      title: d.title,
-      amount: d.amount,
-      payer: d.payer,
+      id:           ds.id,
+      date:         d.date,
+      title:        d.title,
+      amount:       d.amount,
+      payer:        d.payer,
       participants: Array.isArray(d.participants) ? d.participants : []
     };
   });
@@ -209,7 +211,7 @@ onSnapshot(costsRef, snap => {
   }
 });
 
-// Build checkboxes
+// Build cost checkboxes
 const pc = document.getElementById("participant-checkboxes");
 participants.forEach(p => {
   const lbl = document.createElement("label");
@@ -217,7 +219,7 @@ participants.forEach(p => {
   pc.appendChild(lbl);
 });
 
-// Submit cost
+// Submit or update cost
 document.getElementById("cost-form").addEventListener("submit", async e => {
   e.preventDefault();
   const date   = document.getElementById("cost-date").value;
@@ -228,133 +230,142 @@ document.getElementById("cost-form").addEventListener("submit", async e => {
   if (!date || !title || isNaN(amount) || shared.length === 0) {
     return alert("Fyll i alla fält och välj deltagare.");
   }
-  await addDoc(costsRef, { date, title, amount, payer, participants: shared });
-  showToast("Kostnad tillagd");
+  if (editingCostId) {
+    await updateDoc(doc(db, "costs", editingCostId), { date, title, amount, payer, participants: shared });
+    editingCostId = null;
+    e.target.querySelector("button").innerText = "Lägg till kostnad";
+  } else {
+    await addDoc(costsRef, { date, title, amount, payer, participants: shared });
+  }
+  showToast("Kostnad sparad");
   e.target.reset();
 });
 
-// Render cost history
+// Render cost history with edit/delete controls
 function renderCostHistory(costs) {
   const list = document.getElementById("cost-list");
   list.innerHTML = "<h3>Historik</h3>";
   costs.forEach(c => {
-    const { date, title, amount, payer, participants: ids = [] } = c;
-    // map ids → display names
-    const displayNames = ids.map(id => {
-      const found = participants.find(p => p.id === id);
-      return found ? found.name : id;
-    });
-    const payerName = (participants.find(p => p.id === payer) || { name: payer }).name;
+    const { id, date, title, amount, payer, participants: ids = [] } = c;
+    const displayNames = ids.map(pid => (participants.find(p=>p.id===pid)||{name:pid}).name);
+    const payerName    = (participants.find(p=>p.id===payer)||{name:payer}).name;
     const div = document.createElement("div");
-    div.className = "day-box";
+    div.className = "day-box cost-entry";
     div.innerHTML = `
       <strong>${date}</strong>: ${title} – ${amount.toFixed(2)} kr<br>
       Betalat av: ${payerName}<br>
       Deltagare: ${displayNames.join(", ")}
+      <span class="cost-controls">
+        ${payer === currentUser.email.split("@")[0]
+          ? `<span class="icon-btn" onclick="confirmEditCost('${id}','${date}','${title}',${amount},${JSON.stringify(ids)})">📝</span>
+             <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>`
+          : ``}
+      </span>
     `;
     list.appendChild(div);
   });
 }
 
+// Confirm edit/delete for costs
+window.confirmEditCost = (id, date, title, amount, participants) => {
+  if (!confirm("Vill du redigera denna kostnad?")) return;
+  document.getElementById("cost-date").value   = date;
+  document.getElementById("cost-title").value  = title;
+  document.getElementById("cost-amount").value = amount;
+  // Set checkboxes
+  document.querySelectorAll("#participant-checkboxes input").forEach(cb => {
+    cb.checked = participants.includes(cb.value);
+  });
+  editingCostId = id;  
+  document.querySelector("#cost-form button").innerText = "Spara ändring";
+};
+
+window.confirmDeleteCost = async id => {
+  if (!confirm("Är du säker på att du vill ta bort denna kostnad?")) return;
+  await deleteDoc(doc(db, "costs", id));
+  showToast("Kostnaden har raderats");
+};
+
 // Calculate net balances
 function calculateNetBalances(costs) {
   const bal = {};
-  
-  // Initiera bal för varje deltagarpar
   participants.forEach(p => {
     bal[p.id] = {};
     participants.forEach(q => {
       if (p.id !== q.id) bal[p.id][q.id] = 0;
     });
   });
-
-  // Ackumulera skulder, men skippa vid felaktiga poster
   costs.forEach(c => {
     const payer = c.payer;
     const ids   = Array.isArray(c.participants) ? c.participants : [];
-
-    // Skippa om ingen giltig payer eller för få deltagare
     if (!payer || !bal[payer] || ids.length < 2) return;
-
     const share = c.amount / ids.length;
     ids.forEach(pid => {
-      if (pid === payer) return;            // inte deltaga i egen skuld
-      if (!bal[pid] || !bal[payer]) return; // undvik undefined
-      bal[pid][payer] += share;
-      bal[payer][pid] -= share;
+      if (pid !== payer) {
+        bal[pid][payer] += share;
+        bal[payer][pid] -= share;
+      }
     });
   });
-
-  // Netta ut motstridiga skulder
   participants.forEach(a => {
     participants.forEach(b => {
-      if (a.id === b.id) return;
-      const net = bal[a.id][b.id] - bal[b.id][a.id];
-      bal[a.id][b.id] = net > 0 ? net : 0;
-      bal[b.id][a.id] = net > 0 ? 0 : -net;
+      if (a.id !== b.id) {
+        const net = bal[a.id][b.id] - bal[b.id][a.id];
+        bal[a.id][b.id] = net > 0 ? net : 0;
+        bal[b.id][a.id] = net > 0 ? 0 : -net;
+      }
     });
   });
-
   return bal;
 }
 
-// Render balance overview
+// Render balance overview with grouping and color
 function renderBalanceOverview(costs) {
-  // Hämta container
   const ov = document.getElementById("balance-overview");
-  ov.innerHTML = ""; 
-
-  // Räkna fram nettosaldon
+  ov.innerHTML = "";
   const bal = calculateNetBalances(costs);
   const threshold = 0.01;
 
-  // Gå igenom varje person
   participants.forEach(person => {
     const pid = person.id;
-
-    // De som är skyldiga den här personen
+    // Who owes them
     const owesThem = participants
-      .filter(p => p.id !== pid && bal[p.id][pid] > threshold)
+      .filter(p => p.id!==pid && bal[p.id][pid]>threshold)
       .map(p => ({ name: p.name, amount: bal[p.id][pid] }));
-
-    // De som personen är skyldig
+    // Who they owe
     const theyOwe = participants
-      .filter(p => p.id !== pid && bal[pid][p.id] > threshold)
+      .filter(p => p.id!==pid && bal[pid][p.id]>threshold)
       .map(p => ({ name: p.name, amount: bal[pid][p.id] }));
 
-    // Hoppa över om inga skulder alls
-    if (owesThem.length === 0 && theyOwe.length === 0) return;
+    if (!owesThem.length && !theyOwe.length) return;
 
-    // Rubrik för personen
     const heading = document.createElement("h3");
     heading.textContent = person.name;
     ov.appendChild(heading);
 
-    // Lista: de som ska betala personen
-    if (owesThem.length > 0) {
-      const subH1 = document.createElement("h4");
-      subH1.textContent = `Personer som ska betala ${person.name}:`;
-      ov.appendChild(subH1);
-
+    if (owesThem.length) {
+      const sub1 = document.createElement("h4");
+      sub1.textContent = `Personer som ska betala ${person.name}:`;
+      ov.appendChild(sub1);
       const ul1 = document.createElement("ul");
-      owesThem.forEach(entry => {
+      owesThem.forEach(e => {
         const li = document.createElement("li");
-        li.textContent = `${entry.name} – ${entry.amount.toFixed(2)} kr`;
+        li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
+        li.style.color = "red";
         ul1.appendChild(li);
       });
       ov.appendChild(ul1);
     }
 
-    // Lista: personer personen ska betala
-    if (theyOwe.length > 0) {
-      const subH2 = document.createElement("h4");
-      subH2.textContent = `Personer ${person.name} ska betala:`;
-      ov.appendChild(subH2);
-
+    if (theyOwe.length) {
+      const sub2 = document.createElement("h4");
+      sub2.textContent = `Personer ${person.name} ska betala:`;
+      ov.appendChild(sub2);
       const ul2 = document.createElement("ul");
-      theyOwe.forEach(entry => {
+      theyOwe.forEach(e => {
         const li = document.createElement("li");
-        li.textContent = `${entry.name} – ${entry.amount.toFixed(2)} kr`;
+        li.textContent = `${e.name} – ${e.amount.toFixed(2)} kr`;
+        li.style.color = "green";
         ul2.appendChild(li);
       });
       ov.appendChild(ul2);
@@ -375,5 +386,5 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 2500);
 }
 
-// Start page
+// On load
 window.onload = () => showPage("plan");
