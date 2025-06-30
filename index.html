@@ -16,7 +16,17 @@
     <button onclick="showPage('notes')">Viktig Info</button>
   </nav>
 
-  <section id="plan" class="page"></section>
+  <section id="plan" class="page">
+  <h2>Reseplan</h2>
+  <form id="activity-form">
+    <input type="date" id="date" required />
+    <input type="time" id="time" required />
+    <input type="text" id="place" placeholder="Plats" required />
+    <input type="text" id="note" placeholder="Anteckning" />
+    <button type="submit">Lägg till aktivitet</button>
+  </form>
+  <div id="activity-list"></div>
+</section>
   <section id="costs" class="page" style="display:none;"></section>
   <section id="packing" class="page" style="display:none;"></section>
   <section id="notes" class="page" style="display:none;"></section>
