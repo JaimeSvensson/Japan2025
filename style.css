@@ -137,3 +137,13 @@ nav.hidden,
 #auth-section input {
   width: 100%;
 }
+.cost-entry {
+  position: relative;
+  padding-right: 3rem;
+}
+
+.cost-controls {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
