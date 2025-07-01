@@ -210,8 +210,9 @@ onSnapshot(costsRef, snap => {
 // Bygg checkboxar för deltagare
 const pc = document.getElementById("participant-checkboxes");
 participants.forEach(p => {
+  const isCurrentUser = currentUser?.email?.split("@")[0] === p.id;
   const lbl = document.createElement("label");
-  lbl.innerHTML = `<input type="checkbox" value="${p.id}" checked> ${p.name}`;
+  lbl.innerHTML = `<input type="checkbox" value="${p.id}" ${isCurrentUser ? "checked" : ""}> ${p.name}`;
   pc.appendChild(lbl);
 });
 
