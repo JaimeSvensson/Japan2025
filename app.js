@@ -253,10 +253,12 @@ function renderCostHistory(costs) {
       Betalat av: ${payerName}<br>
       Deltagare: ${displayNames.join(", ")}
       <span class="cost-controls">
-        ${payer === currentUser.email.split("@")[0]
-          ? `<span class="icon-btn" onclick="confirmEditCost('${id}','${date}','${title}',${amount},${JSON.stringify(ids)}')">📝</span>
-             <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>`
-          : ``}
+        ${
+          payer === currentUser.email.split("@")[0]
+            ? `<span class="icon-btn" onclick='confirmEditCost("${id}", "${date}", "${title}", ${amount}, ${JSON.stringify(ids)})'>📝</span>
+               <span class="icon-btn" onclick="confirmDeleteCost('${id}')">🗑️</span>`
+            : ``
+        }
       </span>
     `;
     list.appendChild(div);
